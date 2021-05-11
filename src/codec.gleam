@@ -14,10 +14,17 @@ pub type Codec(a){
   )
 }
 
-fn build(encode, decoder) {
+pub fn build(encode, decoder) {
   Codec(
     encode: encode,
     decoder: decoder
+  )
+}
+
+pub fn bool() -> Codec(Bool) {
+  build(
+    dynamic.from,
+    dynamic.bool,
   )
 }
 

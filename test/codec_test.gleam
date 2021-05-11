@@ -7,6 +7,18 @@ pub fn hello_world_test() {
   |> should.equal("Hello, from gleam_codec!")
 }
 
+pub fn bool_test() {
+  let c = codec.bool()
+
+  let value = dynamic.from(True)
+
+  codec.decode(c, value)
+  |> should.equal(Ok(True))
+
+  codec.encode(c, True)
+  |> should.equal(value)
+}
+
 pub fn int_test() {
   let c : Codec(Int) = codec.int()
 

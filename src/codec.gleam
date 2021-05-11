@@ -35,6 +35,20 @@ pub fn int() -> Codec(Int) {
   )
 }
 
+pub fn float() -> Codec(Float) {
+  build(
+    dynamic.from,
+    dynamic.float,
+  )
+}
+
+pub fn string() -> Codec(String) {
+  build(
+    dynamic.from,
+    dynamic.string,
+  )
+}
+
 pub fn encode(codec: Codec(a), a) -> Dynamic {
   codec.encode(a)
 }

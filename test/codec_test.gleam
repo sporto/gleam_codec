@@ -30,3 +30,27 @@ pub fn int_test() {
   codec.encode(c, 22)
   |> should.equal(value)
 }
+
+pub fn float_test() {
+  let c = codec.float()
+
+  let value = dynamic.from(22.1)
+
+  codec.decode(c, value)
+  |> should.equal(Ok(22.1))
+
+  codec.encode(c, 22.1)
+  |> should.equal(value)
+}
+
+pub fn string_test() {
+  let c = codec.string()
+
+  let value = dynamic.from("Hello")
+
+  codec.decode(c, value)
+  |> should.equal(Ok("Hello"))
+
+  codec.encode(c, "Hello")
+  |> should.equal(value)
+}

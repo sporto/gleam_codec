@@ -1,9 +1,5 @@
 import gleam/dynamic.{Dynamic}
 
-pub fn hello_world() -> String {
-  "Hello, from gleam_codec!"
-}
-
 type Decoder(a) =
   fn(Dynamic) -> Result(a, String)
 
@@ -13,6 +9,8 @@ pub type Codec(a){
     decoder: Decoder(a),
   )
 }
+
+// Build codecs
 
 pub fn build(encode, decoder) {
   Codec(
@@ -48,6 +46,15 @@ pub fn string() -> Codec(String) {
     dynamic.string,
   )
 }
+
+pub fn list(codec: Codec(a)) -> Codec(List(a)) {
+  build(
+    dynamic.from,
+    dynamic.typed_list(_, of: codec.decoder),
+  )
+}
+
+// Process
 
 pub fn encode(codec: Codec(a), a) -> Dynamic {
   codec.encode(a)

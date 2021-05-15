@@ -63,12 +63,6 @@ pub fn list_test() {
 	|> should.equal(value)
 }
 
-// type Stage {
-//   Start
-//   InProgress(Int, String)
-//   EEnd(result: Float)
-// }
-
 type Person{
 	Person(
 		name: String
@@ -79,7 +73,7 @@ pub fn record1_test() {
 	let c = codec.record1(
 		"Person",
 		Person,
-		codec.field(
+		codec.record_field(
 			"name",
 			fn(p: Person) { p.name },
 			codec.string()
@@ -114,12 +108,12 @@ pub fn record2_test() {
 	let c = codec.record2(
 		"Pet",
 		Pet,
-		codec.field(
+		codec.record_field(
 			"age",
 			fn(p: Pet) { p.age },
 			codec.int()
 		),
-		codec.field(
+		codec.record_field(
 			"name",
 			fn(p: Pet) { p.name },
 			codec.string()
@@ -143,16 +137,23 @@ pub fn record2_test() {
 	codec.encode(c, pet)
 	|> should.equal(value)
 }
-// pub fn type_test() {
-//   codec.custom_type(fn(encode_start, encode_in_progress, encode_end, value) {
-//     case value {
-//       Start -> encode_start
-//       InProgress(i) -> encode_in_progress(i)
-//       End(s) -> encode_end(s)
-//     }
-//   })
-//   |> codec.variant2("Start", Start)
-//   |> codec.variant1("InProgress", InProgress, codec.int())
-//   |> codec.variant0("End", End, codec.string())
-//   |> codec.finish_custom_type()
+
+type Process {
+	Pending
+	Active(Int, String)
+	Done(result: Float)
+}
+
+// pub fn custom_type_test() {
+// 	let c = codec.custom_type(fn(encode_pending, encode_active, encode_done, value) {
+// 		case value {
+// 			Pending -> encode_pending()
+// 			Active(i, s) -> encode_active(i, s)
+// 			Done(r) -> encode_done(r)
+// 		}
+// 	})
+// 	|> codec.variant0("Pending", Pending)
+// 	|> codec.variant2("Active", Active, codec.int(), codec.string())
+// 	|> codec.variant1("Done", Done, codec.float())
+// 	|> codec.finish_custom_type()
 // }

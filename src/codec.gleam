@@ -48,7 +48,7 @@ pub fn list(codec: Codec(a)) -> Codec(List(a)) {
 	build(dynamic.from, dynamic.typed_list(_, of: codec.decoder))
 }
 
-pub fn field(
+pub fn record_field(
 		name: String,
 		get: fn(record) -> field,
 		field_codec: Codec(field),

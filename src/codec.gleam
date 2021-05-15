@@ -74,17 +74,15 @@ pub fn record1(
 	) -> Codec(final) {
 
 	let encoder = fn(custom: final) -> Dynamic {
-		[
-			#(type_key, dynamic.from(type_name)),
-			#(codec1.field, codec1.encoder(custom))
-		]
-		|> map.from_list
-		|> dynamic.from
+		[]
+		|> dynamic_map_add_field(custom, codec1)
+		|> dynamic_map_add_type_name(type_name)
+		|> dynamic_map_finish
 	}
 
-	let decoder: Decoder(final) = fn(value) {
-		codec1.decoder(value)
-		|> result.map(fn(v1: a) { constructor(v1) })
+	let decoder = fn(value) {
+		Ok(constructor)
+			|> apply_decoded_result(codec1.decoder(value))
 	}
 
 	build(encoder, decoder)
@@ -98,13 +96,11 @@ pub fn record2(
 	) {
 
 	let encoder = fn(custom: final) -> Dynamic {
-		[
-			#(type_key, dynamic.from(type_name)),
-			#(codec1.field, codec1.encoder(custom)),
-			#(codec2.field, codec2.encoder(custom))
-		]
-		|> map.from_list
-		|> dynamic.from
+		[]
+		|> dynamic_map_add_field(custom, codec1)
+		|> dynamic_map_add_field(custom, codec2)
+		|> dynamic_map_add_type_name(type_name)
+		|> dynamic_map_finish
 	}
 
 	let decoder = fn(value) {
@@ -117,6 +113,20 @@ pub fn record2(
 }
 
 // Process
+fn dynamic_map_add_field(fields: List(#(String, Dynamic)), custom: final, codec: RecordCodec(final, a)) {
+	[ #(codec.field, codec.encoder(custom)), ..fields ]
+}
+
+fn dynamic_map_add_type_name(fields, type_name: String) {
+	[#(type_key, dynamic.from(type_name)), ..fields]
+}
+
+fn dynamic_map_finish(fields) {
+	fields
+	|> map.from_list
+	|> dynamic.from
+}
+
 fn apply_decoded_result(
 		accumulator: Result(fn(b) -> next, String),
 		decoder_result: Result(b, String),

@@ -145,33 +145,7 @@ type Semaphore {
 	Red
 }
 
-type Process {
-	Pending
-	Active(Int, String)
-	Done(answer: Float)
-}
-
-pub fn custom_test() {
-	// let c = codec.custom(fn(encode_pending, encode_active, encode_done, value) {
-	// 	case value {
-	// 		Pending -> encode_pending()
-	// 		Active(i, s) -> encode_active(i, s)
-	// 		Done(r) -> encode_done(r)
-	// 	}
-	// })
-	// |> codec.variant0("Pending", Pending)
-	// |> codec.variant2(
-	// 	"Active",
-	// 	Active,
-	// 	codec.variant_field("count", codec.int()),
-	// 	codec.variant_field("name", codec.string())
-	// 	)
-	// |> codec.variant1(
-	// 	"Done",
-	// 	Done,
-	// 	codec.variant_field("answer", codec.float())
-	// )
-	// |> codec.finish_custom_type()
+pub fn custom_variant0_test() {
 
 	let c = codec.custom(
 		fn(
@@ -220,4 +194,97 @@ pub fn custom_test() {
 
 	codec.encode(c, Red)
 	|> should.equal(value_red)
+}
+
+type Process {
+	Pending
+	Active(Int, String)
+	Done(answer: Float)
+}
+
+
+pub fn custom_test() {
+	let c = codec.custom(
+		fn(
+			encode_pending,
+			encode_active,
+			encode_done,
+			value
+		) {
+			case value {
+				Pending ->
+					encode_pending()
+				Active(i, s) ->
+					encode_active(i, s)
+				Done(r) ->
+					encode_done(r)
+			}
+		}
+		|> function.curry4
+	)
+	|> codec.variant0("Pending", Pending)
+	|> codec.variant2(
+		"Active",
+		Active,
+		codec.variant_field("count", codec.int()),
+		codec.variant_field("name", codec.string())
+		)
+	|> codec.variant1(
+		"Done",
+		Done,
+		codec.variant_field("answer", codec.float())
+	)
+	|> codec.finish_custom()
+
+	// Pending
+
+	let value_pending =
+		[
+			#("__type__", dynamic.from("Pending")),
+		]
+		|> map.from_list
+		|> dynamic.from
+
+	codec.decode(c, value_pending)
+	|> should.equal(Ok(Pending))
+
+	codec.encode(c, Pending)
+	|> should.equal(value_pending)
+
+	// Active
+
+	let value_active =
+		[
+			#("__type__", dynamic.from("Active")),
+			#("count", dynamic.from(99)),
+			#("name", dynamic.from("lol")),
+		]
+		|> map.from_list
+		|> dynamic.from
+
+	let active = Active(99, "lol")
+
+	codec.decode(c, value_active)
+	|> should.equal(Ok(active))
+
+	codec.encode(c, active)
+	|> should.equal(value_active)
+
+	// Done
+
+	let value_done =
+		[
+			#("__type__", dynamic.from("Done")),
+			#("answer", dynamic.from(42.0)),
+		]
+		|> map.from_list
+		|> dynamic.from
+
+	let done = Done(42.0)
+
+	codec.decode(c, value_done)
+	|> should.equal(Ok(done))
+
+	codec.encode(c, done)
+	|> should.equal(value_done)
 }

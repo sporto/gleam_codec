@@ -235,7 +235,80 @@ pub fn variant0(
 		decoder
 	)
 
-	// Need to apply the encoder one by one to match
+	CustomCodec(
+		match: c.match(encoder),
+		decoders: decoders
+	)
+}
+
+pub fn variant1(
+		c: CustomCodec(
+			fn(fn(one) -> Dynamic) -> a,
+			cons
+		),
+		type_name: String,
+		constructor: fn(one) -> cons,
+		codec1: VariantCodec(one)
+	) -> CustomCodec(a, cons) {
+
+	let encoder = fn(a) {
+		[
+			#(type_key, dynamic.from(type_name)),
+			#(codec1.field, codec1.encoder(a))
+		]
+		|> map.from_list
+		|> dynamic.from
+	}
+
+	let decoder = fn(value: Dynamic) {
+		codec1.decoder(value)
+		|> result.map(constructor)
+	}
+
+	let decoders = map.insert(
+		c.decoders,
+		type_name,
+		decoder
+	)
+
+	CustomCodec(
+		match: c.match(encoder),
+		decoders: decoders
+	)
+}
+
+pub fn variant2(
+		c: CustomCodec(
+			fn(fn(one, two) -> Dynamic) -> a,
+			cons
+		),
+		type_name: String,
+		constructor: fn(one, two) -> cons,
+		codec1: VariantCodec(one),
+		codec2: VariantCodec(two)
+	) -> CustomCodec(a, cons) {
+
+	let encoder = fn(a, b) {
+		[
+			#(type_key, dynamic.from(type_name)),
+			#(codec1.field, codec1.encoder(a)),
+			#(codec2.field, codec2.encoder(b))
+		]
+		|> map.from_list
+		|> dynamic.from
+	}
+
+	let decoder = fn(value: Dynamic) {
+		Ok(function.curry2(constructor))
+		|> apply_decoded_result(codec1.decoder(value))
+		|> apply_decoded_result(codec2.decoder(value))
+	}
+
+	let decoders = map.insert(
+		c.decoders,
+		type_name,
+		decoder
+	)
 
 	CustomCodec(
 		match: c.match(encoder),

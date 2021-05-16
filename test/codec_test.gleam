@@ -2,6 +2,7 @@ import codec.{Codec}
 import gleam/should
 import gleam/dynamic
 import gleam/map
+import gleam/function
 
 pub fn bool_test() {
 	let c = codec.bool()
@@ -178,18 +179,45 @@ pub fn custom_test() {
 			encode_yellow,
 			encode_red,
 			value
-		) {
-			case value {
-				Green ->
-					encode_green()
-				Yellow ->
-					encode_yellow()
-				Red ->
-					encode_red()
-			}
-	})
+			) {
+				case value {
+					Green ->
+						encode_green()
+					Yellow ->
+						encode_yellow()
+					Red ->
+						encode_red()
+				}
+		} |> function.curry4
+	)
 	|> codec.variant0("Green", Green)
 	|> codec.variant0("Yellow", Yellow)
 	|> codec.variant0("Red", Red)
 	|> codec.finish_custom()
+
+	let value_green =
+		[
+			#("__type__", dynamic.from("Green")),
+		]
+		|> map.from_list
+		|> dynamic.from
+
+	codec.decode(c, value_green)
+	|> should.equal(Ok(Green))
+
+	codec.encode(c, Green)
+	|> should.equal(value_green)
+
+	let value_red =
+		[
+			#("__type__", dynamic.from("Red")),
+		]
+		|> map.from_list
+		|> dynamic.from
+
+	codec.decode(c, value_red)
+	|> should.equal(Ok(Red))
+
+	codec.encode(c, Red)
+	|> should.equal(value_red)
 }

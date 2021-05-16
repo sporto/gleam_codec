@@ -211,9 +211,12 @@ pub fn variant_field(
 // }
 
 pub fn variant0(
+		c: CustomCodec(
+			fn(fn() -> Dynamic) -> a,
+			cons
+		),
 		type_name: String,
 		constructor: cons,
-		c: CustomCodec(fn(Dynamic) -> a, cons),
 	) -> CustomCodec(a, cons) {
 
 	let encoder = fn() {
@@ -231,6 +234,8 @@ pub fn variant0(
 		type_name,
 		decoder
 	)
+
+	// Need to apply the encoder one by one to match
 
 	CustomCodec(
 		match: c.match(encoder),

@@ -1,7 +1,8 @@
 import gleam/dynamic.{Dynamic}
-import gleam/map
-import gleam/result
 import gleam/function
+import gleam/map.{Map}
+import gleam/result
+import gleam/string
 
 const type_key = "__type__"
 
@@ -13,14 +14,6 @@ type Decoder(a) =
 
 pub type Codec(a) {
 	Codec(encoder: Encoder(a), decoder: Decoder(a))
-}
-
-pub type RecordCodec(input, output) {
-	RecordCodec(
-		field: String,
-		encoder: Encoder(input),
-		decoder: Decoder(output)
-	)
 }
 
 // Build codecs
@@ -46,6 +39,14 @@ pub fn string() -> Codec(String) {
 
 pub fn list(codec: Codec(a)) -> Codec(List(a)) {
 	build(dynamic.from, dynamic.typed_list(_, of: codec.decoder))
+}
+
+pub type RecordCodec(input, output) {
+	RecordCodec(
+		field: String,
+		encoder: Encoder(input),
+		decoder: Decoder(output)
+	)
 }
 
 pub fn record_field(
@@ -110,6 +111,131 @@ pub fn record2(
 	}
 
 	build(encoder, decoder)
+}
+
+pub type CustomCodec(match, v) {
+	CustomCodec(
+		match: match,
+		decoders: Map(String, Decoder(v)),
+	)
+}
+
+pub fn custom(match) {
+	CustomCodec(
+		match,
+		decoders: map.new()
+	)
+}
+
+pub fn finish_custom(
+		c: CustomCodec(Encoder(final), final)
+	) -> Codec(final) {
+
+	let encoder: Encoder(final) = c.match
+
+	let decoder = fn(value: Dynamic) -> Result(final, String) {
+		try tag_field = dynamic
+			.field(from: value, named: type_key)
+
+		try tag : String = dynamic
+			.string(tag_field)
+
+		// Find the decoder for this tag
+		try decoder = map
+			.get(c.decoders, tag)
+			|> result.replace_error(
+				string.append("Couldn't find tag ", tag)
+			)
+
+		decoder(value)
+	}
+
+	Codec(
+		encoder: encoder,
+		decoder: decoder,
+	)
+}
+
+pub type VariantCodec(field) {
+	VariantCodec(
+		field: String,
+		encoder: Encoder(field),
+		decoder: Decoder(field)
+	)
+}
+
+pub fn variant_field(
+		field_name: String,
+		field_codec: Codec(field)
+	) -> VariantCodec(field) {
+
+	let decoder: Decoder(field) = fn(record: Dynamic) {
+		dynamic.field(record, field_name)
+		|> result.then(field_codec.decoder)
+	}
+
+	VariantCodec(
+		field_name,
+		field_codec.encoder,
+		decoder
+	)
+}
+
+// fn variant(
+// 		type_name: String,
+// 		match_piece: fn(fn(List(Dynamic)) -> Dynamic) -> a
+// 		decoder_piece: Decoder(v),
+// 		am: CustomCodec(fn(a) -> b, v),
+// 	) -> CustomCodec(b, v) {
+
+// 	 let enc = fn(v) {
+// 		JE.object
+// 			[ ( "tag", JE.string name )
+// 			, ( "args", JE.list identity v )
+// 			]
+// 	 }
+
+// 	let match = match_piece(enc)
+// 		|> am.match
+
+// 	let decoder = map.insert(
+// 		am.decoder,
+// 		type_name,
+// 		decoder_piece,
+// 	)
+
+//     CustomCodec(
+//         match: match,
+//         decoder: decoder
+// 	)
+// }
+
+pub fn variant0(
+		type_name: String,
+		constructor: cons,
+		c: CustomCodec(fn(Dynamic) -> a, cons),
+	) -> CustomCodec(a, cons) {
+
+	let encoder = fn() {
+		[#(type_key, type_name)]
+		|> map.from_list
+		|> dynamic.from
+	}
+
+	let decoder = fn(value: Dynamic) {
+		Ok(constructor)
+	}
+
+	let decoders = map.insert(
+		c.decoders,
+		type_name,
+		decoder
+	)
+
+	CustomCodec(
+		match: c.match(encoder),
+		decoders: decoders
+	)
 }
 
 // Process

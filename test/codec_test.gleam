@@ -138,22 +138,58 @@ pub fn record2_test() {
 	|> should.equal(value)
 }
 
+type Semaphore {
+	Green
+	Yellow
+	Red
+}
+
 type Process {
 	Pending
 	Active(Int, String)
-	Done(result: Float)
+	Done(answer: Float)
 }
 
-// pub fn custom_type_test() {
-// 	let c = codec.custom_type(fn(encode_pending, encode_active, encode_done, value) {
-// 		case value {
-// 			Pending -> encode_pending()
-// 			Active(i, s) -> encode_active(i, s)
-// 			Done(r) -> encode_done(r)
-// 		}
-// 	})
-// 	|> codec.variant0("Pending", Pending)
-// 	|> codec.variant2("Active", Active, codec.int(), codec.string())
-// 	|> codec.variant1("Done", Done, codec.float())
-// 	|> codec.finish_custom_type()
-// }
+pub fn custom_test() {
+	// let c = codec.custom(fn(encode_pending, encode_active, encode_done, value) {
+	// 	case value {
+	// 		Pending -> encode_pending()
+	// 		Active(i, s) -> encode_active(i, s)
+	// 		Done(r) -> encode_done(r)
+	// 	}
+	// })
+	// |> codec.variant0("Pending", Pending)
+	// |> codec.variant2(
+	// 	"Active",
+	// 	Active,
+	// 	codec.variant_field("count", codec.int()),
+	// 	codec.variant_field("name", codec.string())
+	// 	)
+	// |> codec.variant1(
+	// 	"Done",
+	// 	Done,
+	// 	codec.variant_field("answer", codec.float())
+	// )
+	// |> codec.finish_custom_type()
+
+	let c = codec.custom(
+		fn(
+			encode_green,
+			encode_yellow,
+			encode_red,
+			value
+		) {
+			case value {
+				Green ->
+					encode_green()
+				Yellow ->
+					encode_yellow()
+				Red ->
+					encode_red()
+			}
+	})
+	|> codec.variant0("Green", Green)
+	|> codec.variant0("Yellow", Yellow)
+	|> codec.variant0("Red", Red)
+	|> codec.finish_custom()
+}

@@ -41,8 +41,14 @@ pub fn string() -> Codec(String) {
 }
 
 pub fn list(codec: Codec(a)) -> Codec(List(a)) {
+	let encoder = fn(collection) {
+		collection
+		|> list.map(codec.encoder)
+		|> dynamic.from
+	}
+
 	build(
-		dynamic.from,
+		encoder,
 		dynamic.typed_list(_, of: codec.decoder)
 	)
 }

@@ -115,6 +115,24 @@ pub fn list_test() {
 	|> should.equal(value)
 }
 
+pub fn list_complex_test() {
+	let c = codec.list(person_codec())
+
+	let sam = person_sam()
+	let tess = person_tess()
+
+	let people = [sam, tess]
+
+	let value = [person_sam_value(), person_tess_value()]
+	|> dynamic.from
+
+	codec.decode(c, value)
+	|> should.equal(Ok(people))
+
+	codec.encode(c, people)
+	|> should.equal(value)
+}
+
 pub fn map_test() {
 	let c = codec.map(
 		codec.string(),

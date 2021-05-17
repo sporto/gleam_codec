@@ -181,35 +181,6 @@ pub fn variant_field(
 	)
 }
 
-// fn variant(
-// 		type_name: String,
-// 		match_piece: fn(fn(List(Dynamic)) -> Dynamic) -> a
-// 		decoder_piece: Decoder(v),
-// 		am: CustomCodec(fn(a) -> b, v),
-// 	) -> CustomCodec(b, v) {
-
-// 	 let enc = fn(v) {
-// 		JE.object
-// 			[ ( "tag", JE.string name )
-// 			, ( "args", JE.list identity v )
-// 			]
-// 	 }
-
-// 	let match = match_piece(enc)
-// 		|> am.match
-
-// 	let decoder = map.insert(
-// 		am.decoder,
-// 		type_name,
-// 		decoder_piece,
-// 	)
-
-//     CustomCodec(
-//         match: match,
-//         decoder: decoder
-// 	)
-// }
-
 pub fn variant0(
 		c: CustomCodec(
 			fn(fn() -> Dynamic) -> a,
@@ -252,12 +223,10 @@ pub fn variant1(
 	) -> CustomCodec(a, cons) {
 
 	let encoder = fn(a) {
-		[
-			#(type_key, dynamic.from(type_name)),
-			#(codec1.field, codec1.encoder(a))
-		]
-		|> map.from_list
-		|> dynamic.from
+		[]
+		|> dynamic_map_add_type_name(type_name)
+		|> variant_map_add_field(a, codec1)
+		|> dynamic_map_finish
 	}
 
 	let decoder = fn(value: Dynamic) {
@@ -289,13 +258,11 @@ pub fn variant2(
 	) -> CustomCodec(a, cons) {
 
 	let encoder = fn(a, b) {
-		[
-			#(type_key, dynamic.from(type_name)),
-			#(codec1.field, codec1.encoder(a)),
-			#(codec2.field, codec2.encoder(b))
-		]
-		|> map.from_list
-		|> dynamic.from
+		[]
+		|> dynamic_map_add_type_name(type_name)
+		|> variant_map_add_field(a, codec1)
+		|> variant_map_add_field(b, codec2)
+		|> dynamic_map_finish
 	}
 
 	let decoder = fn(value: Dynamic) {
@@ -317,12 +284,24 @@ pub fn variant2(
 }
 
 // Process
-fn dynamic_map_add_field(fields: List(#(String, Dynamic)), custom: final, codec: RecordCodec(final, a)) {
+fn dynamic_map_add_field(
+		fields: List(#(String, Dynamic)),
+		custom: final,
+		codec: RecordCodec(final, a)
+	) {
 	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }
 
 fn dynamic_map_add_type_name(fields, type_name: String) {
 	[#(type_key, dynamic.from(type_name)), ..fields]
+}
+
+fn variant_map_add_field(
+		fields: List(#(String, Dynamic)),
+		custom: final,
+		codec: VariantCodec(final)
+	) {
+	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }
 
 fn dynamic_map_finish(fields) {

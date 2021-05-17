@@ -1,15 +1,41 @@
-# gleam_codec
+# Gleam Codec
 
-A Gleam project
+A library for encoding and decoding Gleam data structures to Erlang and Elixir via codecs.
 
-## Quick start
+- A codec create both an encoder and decoder that are always in sync.
+- A codec has an opinionated serialization format. Custom types are serialized as maps.
+- A codec is not appropriate for decoding external data structures. As a codec expects a particular data structure.
 
-```sh
-# Run the eunit tests
-rebar3 eunit
+## Example
 
-# Run the Erlang REPL
-rebar3 shell
+```rust
+import codec
+
+type Person{
+	Person(
+		name: String
+	)
+}
+
+let c = codec.record1(
+    "Person",
+    Person,
+    codec.record_field(
+        "name",
+        fn(p: Person) { p.name },
+        codec.string()
+    ),
+)
+
+let sam = Person("Sam")
+
+codec.encode(c, sam)
+```
+
+Returns an Elixir map like
+
+```elixir
+%{ "__type__" => "Person", "name" => "Sam" }
 ```
 
 ## Installation

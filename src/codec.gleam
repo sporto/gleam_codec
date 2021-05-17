@@ -1,7 +1,9 @@
+import gleam/atom
 import gleam/dynamic.{Dynamic}
 import gleam/function
 import gleam/list
 import gleam/map.{Map} as gleam_map
+import gleam/option.{Option,Some,None}
 import gleam/result
 import gleam/string
 
@@ -45,6 +47,21 @@ pub fn list(codec: Codec(a)) -> Codec(List(a)) {
 	)
 }
 
+/// Create a codec for a Map
+///
+/// # Example
+///
+/// ```
+/// let c = codec.map(
+///   codec.string(),
+///   codec.int(),
+/// )
+///
+/// let dict = [ #("a", 1) ] |> map.from_list
+///
+/// codec.encode(c, dict)
+/// ```
+///
 pub fn map(
 		codec_key: Codec(a),
 		codec_value: Codec(b)
@@ -71,6 +88,30 @@ pub fn map(
 
 	build(
 		dynamic.from,
+		decoder
+	)
+}
+
+pub fn option(codec: Codec(a)) -> Codec(Option(a)) {
+
+	let encoder = fn(op) {
+		case op {
+			Some(v) -> codec.encoder(v)
+			None ->
+				atom.create_from_string("null")
+				|> dynamic.from
+		}
+	}
+
+	let decoder = fn(value: Dynamic) {
+		dynamic.option(
+			from: value,
+			of: codec.decoder
+		)
+	}
+
+	build(
+		encoder,
 		decoder
 	)
 }

@@ -1,8 +1,10 @@
 import codec.{Codec}
-import gleam/should
+import gleam/atom
 import gleam/dynamic
-import gleam/map
 import gleam/function
+import gleam/map
+import gleam/option.{Option,Some,None}
+import gleam/should
 
 pub fn bool_test() {
 	let c = codec.bool()
@@ -86,12 +88,36 @@ pub fn map_test() {
 	|> should.equal(value)
 }
 
+// TODO, in map make sure val is encoded using the given encoder
+
+pub fn option_test() {
+	let c = codec.option(
+		codec.string(),
+	)
+
+	let some = Some("Hello")
+
+	let value_some = dynamic.from("Hello")
+
+	let value_none = atom.create_from_string("null")
+		|> dynamic.from
+
+	codec.encode(c, some)
+	|> should.equal(value_some)
+
+	codec.decode(c, value_some)
+	|> should.equal(Ok(some))
+
+	codec.encode(c, None)
+	|> should.equal(value_none)
+
+	codec.decode(c, value_none)
+	|> should.equal(Ok(None))
+}
+
 // TODO
-// option
-// result
 // tuple2
 // tuple3
-// set
 
 type Person{
 	Person(

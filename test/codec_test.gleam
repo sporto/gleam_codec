@@ -64,6 +64,35 @@ pub fn list_test() {
 	|> should.equal(value)
 }
 
+pub fn map_test() {
+	let c = codec.map(
+		codec.string(),
+		codec.int()
+	)
+
+	let dict = [
+		#("a", 1),
+		#("b", 2),
+	]
+	|> map.from_list
+
+	let value = dict
+	|> dynamic.from
+
+	codec.decode(c, value)
+	|> should.equal(Ok(dict))
+
+	codec.encode(c, dict)
+	|> should.equal(value)
+}
+
+// TODO
+// option
+// result
+// tuple2
+// tuple3
+// set
+
 type Person{
 	Person(
 		name: String

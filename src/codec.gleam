@@ -1,6 +1,7 @@
 import gleam/dynamic.{Dynamic}
 import gleam/function
-import gleam/map.{Map}
+import gleam/list
+import gleam/map.{Map} as gleam_map
 import gleam/result
 import gleam/string
 
@@ -38,7 +39,40 @@ pub fn string() -> Codec(String) {
 }
 
 pub fn list(codec: Codec(a)) -> Codec(List(a)) {
-	build(dynamic.from, dynamic.typed_list(_, of: codec.decoder))
+	build(
+		dynamic.from,
+		dynamic.typed_list(_, of: codec.decoder)
+	)
+}
+
+pub fn map(
+		codec_key: Codec(a),
+		codec_value: Codec(b)
+	) -> Codec(Map(a, b)) {
+
+	let decoder = fn(value) {
+		dynamic.map(value)
+		|> result.then(fn(dict: Map(Dynamic, Dynamic)) {
+			dict
+			|> gleam_map.to_list
+			|> list.map(fn(pair) {
+				let #(dkey, dval) = pair
+				case codec_key.decoder(dkey), codec_value.decoder(dval) {
+					Ok(key), Ok(val) ->
+						Ok(#(key, val))
+					_, _ ->
+						Error("")
+				}
+			})
+			|> result.all
+			|> result.map(gleam_map.from_list)
+		})
+	}
+
+	build(
+		dynamic.from,
+		decoder
+	)
 }
 
 pub type RecordCodec(input, output) {
@@ -123,7 +157,7 @@ pub type CustomCodec(match, v) {
 pub fn custom(match) {
 	CustomCodec(
 		match,
-		decoders: map.new()
+		decoders: gleam_map.new()
 	)
 }
 
@@ -141,7 +175,7 @@ pub fn finish_custom(
 			.string(tag_field)
 
 		// Find the decoder for this tag
-		try decoder = map
+		try decoder = gleam_map
 			.get(c.decoders, tag)
 			|> result.replace_error(
 				string.append("Couldn't find tag ", tag)
@@ -192,7 +226,7 @@ pub fn variant0(
 
 	let encoder = fn() {
 		[#(type_key, type_name)]
-		|> map.from_list
+		|> gleam_map.from_list
 		|> dynamic.from
 	}
 
@@ -200,7 +234,7 @@ pub fn variant0(
 		Ok(constructor)
 	}
 
-	let decoders = map.insert(
+	let decoders = gleam_map.insert(
 		c.decoders,
 		type_name,
 		decoder
@@ -214,13 +248,13 @@ pub fn variant0(
 
 pub fn variant1(
 		c: CustomCodec(
-			fn(fn(one) -> Dynamic) -> a,
+			fn(fn(a) -> Dynamic) -> next,
 			cons
 		),
 		type_name: String,
-		constructor: fn(one) -> cons,
-		codec1: VariantCodec(one)
-	) -> CustomCodec(a, cons) {
+		constructor: fn(a) -> cons,
+		codec1: VariantCodec(a)
+	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a) {
 		[]
@@ -234,7 +268,7 @@ pub fn variant1(
 		|> result.map(constructor)
 	}
 
-	let decoders = map.insert(
+	let decoders = gleam_map.insert(
 		c.decoders,
 		type_name,
 		decoder
@@ -248,14 +282,14 @@ pub fn variant1(
 
 pub fn variant2(
 		c: CustomCodec(
-			fn(fn(one, two) -> Dynamic) -> a,
+			fn(fn(a, b) -> Dynamic) -> next,
 			cons
 		),
 		type_name: String,
-		constructor: fn(one, two) -> cons,
-		codec1: VariantCodec(one),
-		codec2: VariantCodec(two)
-	) -> CustomCodec(a, cons) {
+		constructor: fn(a, b) -> cons,
+		codec1: VariantCodec(a),
+		codec2: VariantCodec(b)
+	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a, b) {
 		[]
@@ -271,7 +305,47 @@ pub fn variant2(
 		|> apply_decoded_result(codec2.decoder(value))
 	}
 
-	let decoders = map.insert(
+	let decoders = gleam_map.insert(
+		c.decoders,
+		type_name,
+		decoder
+	)
+
+	CustomCodec(
+		match: c.match(encoder),
+		decoders: decoders
+	)
+}
+
+pub fn variant3(
+		c: CustomCodec(
+			fn(fn(a, b, c) -> Dynamic) -> next,
+			cons
+		),
+		type_name: String,
+		constructor: fn(a, b, c) -> cons,
+		codec1: VariantCodec(a),
+		codec2: VariantCodec(b),
+		codec3: VariantCodec(c),
+	) -> CustomCodec(next, cons) {
+
+	let encoder = fn(a, b, c) {
+		[]
+		|> dynamic_map_add_type_name(type_name)
+		|> variant_map_add_field(a, codec1)
+		|> variant_map_add_field(b, codec2)
+		|> variant_map_add_field(c, codec3)
+		|> dynamic_map_finish
+	}
+
+	let decoder = fn(value: Dynamic) {
+		Ok(function.curry3(constructor))
+		|> apply_decoded_result(codec1.decoder(value))
+		|> apply_decoded_result(codec2.decoder(value))
+		|> apply_decoded_result(codec3.decoder(value))
+	}
+
+	let decoders = gleam_map.insert(
 		c.decoders,
 		type_name,
 		decoder
@@ -306,7 +380,7 @@ fn variant_map_add_field(
 
 fn dynamic_map_finish(fields) {
 	fields
-	|> map.from_list
+	|> gleam_map.from_list
 	|> dynamic.from
 }
 

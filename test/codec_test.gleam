@@ -50,6 +50,11 @@ fn person_tess() {
 	Person("Tess")
 }
 
+fn null_value() {
+	atom.create_from_string("null")
+		|> dynamic.from
+}
+
 pub fn bool_test() {
 	let c = codec.bool()
 
@@ -143,8 +148,7 @@ pub fn option_test() {
 
 	let value_some = dynamic.from("Hello")
 
-	let value_none = atom.create_from_string("null")
-		|> dynamic.from
+	let value_none = null_value()
 
 	codec.encode(c, some)
 	|> should.equal(value_some)
@@ -159,10 +163,23 @@ pub fn option_test() {
 	|> should.equal(Ok(None))
 }
 
-// TODO. Option wrapping another complex codec
+pub fn option_complex_test() {
+	let c = codec.option(
+		person_codec()
+	)
+
+	let sam = person_sam()
+
+	let value_some = person_sam_value()
+
+	codec.encode(c, Some(sam))
+	|> should.equal(value_some)
+
+	codec.decode(c, value_some)
+	|> should.equal(Ok(Some(sam)))
+}
 
 // TODO
-// tuple2
 // tuple3
 
 pub fn tuple2_test() {

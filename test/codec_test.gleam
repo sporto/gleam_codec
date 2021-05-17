@@ -137,7 +137,34 @@ pub fn map_test() {
 	|> should.equal(value)
 }
 
-// TODO, in map make sure val is encoded using the given encoder
+pub fn map_complex_test() {
+	let c = codec.map(
+		codec.string(),
+		person_codec()
+	)
+
+	let sam = person_sam()
+	let tess = person_tess()
+
+	let dict = [
+		#("sam", sam),
+		#("tess", tess),
+	]
+	|> map.from_list
+
+	let value = [
+		#("sam", person_sam_value()),
+		#("tess", person_tess_value())
+	]
+	|> map.from_list
+	|> dynamic.from
+
+	codec.decode(c, value)
+	|> should.equal(Ok(dict))
+
+	codec.encode(c, dict)
+	|> should.equal(value)
+}
 
 pub fn option_test() {
 	let c = codec.option(

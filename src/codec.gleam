@@ -67,6 +67,20 @@ pub fn map(
 		codec_value: Codec(b)
 	) -> Codec(Map(a, b)) {
 
+	let encoder = fn(dict) {
+		dict
+		|> gleam_map.to_list
+		|> list.map(fn(pair) {
+			let #(key, val) = pair
+			#(
+				codec_key.encoder(key),
+				codec_value.encoder(val)
+			)
+		})
+		|> gleam_map.from_list
+		|> dynamic.from
+	}
+
 	let decoder = fn(value) {
 		dynamic.map(value)
 		|> result.then(fn(dict: Map(Dynamic, Dynamic)) {
@@ -87,7 +101,7 @@ pub fn map(
 	}
 
 	build(
-		dynamic.from,
+		encoder,
 		decoder
 	)
 }

@@ -115,9 +115,29 @@ pub fn option_test() {
 	|> should.equal(Ok(None))
 }
 
+// TODO. Option wrapping another complex codec
+
 // TODO
 // tuple2
 // tuple3
+
+pub fn tuple2_test() {
+	let c = codec.tuple2(
+		codec.string(),
+		codec.int(),
+	)
+
+	let tup = #("Hello", 12)
+
+	let value = tup
+	|> dynamic.from
+
+	codec.encode(c, tup)
+	|> should.equal(value)
+
+	codec.decode(c, value)
+	|> should.equal(Ok(tup))
+}
 
 type Person{
 	Person(

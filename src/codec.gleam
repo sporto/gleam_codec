@@ -116,6 +116,32 @@ pub fn option(codec: Codec(a)) -> Codec(Option(a)) {
 	)
 }
 
+pub fn tuple2(
+		codec_a: Codec(a),
+		codec_b: Codec(b),
+	) -> Codec(#(a, b)) {
+
+	let encoder = fn(tup) {
+		let #(a, b) = tup
+
+		#(codec_a.encoder(a), codec_b.encoder(b))
+		|> dynamic.from
+	}
+
+	let decoder = fn(value) {
+		dynamic.typed_tuple2(
+			from: value,
+			first: codec_a.decoder,
+			second: codec_b.decoder
+		)
+	}
+
+	build(
+		encoder,
+		decoder
+	)
+}
+
 pub type RecordCodec(input, output) {
 	RecordCodec(
 		field: String,

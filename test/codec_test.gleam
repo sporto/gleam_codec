@@ -6,6 +6,50 @@ import gleam/map
 import gleam/option.{Option,Some,None}
 import gleam/should
 
+type Person{
+	Person(
+		name: String
+	)
+}
+
+fn person_codec() {
+	codec.record1(
+		"Person",
+		Person,
+		codec.record_field(
+			"name",
+			fn(p: Person) { p.name },
+			codec.string()
+		),
+	)
+}
+
+fn person_sam_value() {
+	[
+		#("__type__", dynamic.from("Person")),
+		#("name", dynamic.from("Sam"))
+	]
+	|> map.from_list
+	|> dynamic.from
+}
+
+fn person_tess_value() {
+	[
+		#("__type__", dynamic.from("Person")),
+		#("name", dynamic.from("Tess"))
+	]
+	|> map.from_list
+	|> dynamic.from
+}
+
+fn person_sam() {
+	Person("Sam")
+}
+
+fn person_tess() {
+	Person("Tess")
+}
+
 pub fn bool_test() {
 	let c = codec.bool()
 
@@ -139,32 +183,35 @@ pub fn tuple2_test() {
 	|> should.equal(Ok(tup))
 }
 
-type Person{
-	Person(
-		name: String
+pub fn tuple2_complex_test() {
+
+	let c = codec.tuple2(
+		person_codec(),
+		person_codec(),
 	)
+
+	let sam = person_sam()
+	let tess = person_tess()
+
+	let tup = #(sam, tess)
+
+	let value = #(
+		person_sam_value(),
+		person_tess_value()
+	)
+	|> dynamic.from
+
+	codec.encode(c, tup)
+	|> should.equal(value)
+
+	codec.decode(c, value)
+	|> should.equal(Ok(tup))
 }
 
 pub fn record1_test() {
-	let c = codec.record1(
-		"Person",
-		Person,
-		codec.record_field(
-			"name",
-			fn(p: Person) { p.name },
-			codec.string()
-		),
-	)
-
-	let value =
-		[
-			#("__type__", dynamic.from("Person")),
-			#("name", dynamic.from("Sam"))
-		]
-		|> map.from_list
-		|> dynamic.from
-
-	let person = Person("Sam")
+	let c = person_codec()
+	let value = person_sam_value()
+	let person = person_sam()
 
 	codec.decode(c, value)
 	|> should.equal(Ok(person))

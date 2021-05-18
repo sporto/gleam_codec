@@ -257,15 +257,24 @@ pub fn tuple2(
 }
 
 /// A codec for a record field
-pub type RecordFieldCodec(input, output) {
-	RecordFieldCodec(
+pub type AsymmetricalFieldCodec(input, output) {
+	AsymmetricalFieldCodec(
 		field: String,
 		encoder: Encoder(input),
 		decoder: Decoder(output)
 	)
 }
 
-/// Build a RecordFieldCodec
+/// Type used for specifiying a variant field
+pub type SymmetricalFieldCodec(field) {
+	SymmetricalFieldCodec(
+		field: String,
+		encoder: Encoder(field),
+		decoder: Decoder(field)
+	)
+}
+
+/// Build a AsymmetricalFieldCodec
 /// To be used with record1, record2, ...
 ///
 /// ## Example
@@ -282,7 +291,7 @@ pub fn record_field(
 		name: String,
 		get: fn(record) -> field,
 		field_codec: Codec(field),
-	) -> RecordFieldCodec(record, field) {
+	) -> AsymmetricalFieldCodec(record, field) {
 
 	let encoder : Encoder(record) = fn(record) -> Dynamic {
 		let field_value = get(record)
@@ -294,7 +303,7 @@ pub fn record_field(
 		|> result.then(field_codec.decoder)
 	}
 
-	RecordFieldCodec(name, encoder, decoder)
+	AsymmetricalFieldCodec(name, encoder, decoder)
 }
 
 /// Create a codec for a record (a custom type with only one constructor) with one field
@@ -335,7 +344,7 @@ pub fn record_field(
 pub fn record1(
 		type_name: String,
 		constructor: fn(a) -> final,
-		codec1: RecordFieldCodec(final, a),
+		codec1: AsymmetricalFieldCodec(final, a),
 	) -> Codec(final) {
 
 	let encoder = fn(custom: final) -> Dynamic {
@@ -384,8 +393,8 @@ pub fn record1(
 pub fn record2(
 		type_name: String,
 		constructor: fn(a, b) -> final,
-		codec1: RecordFieldCodec(final, a),
-		codec2: RecordFieldCodec(final, b),
+		codec1: AsymmetricalFieldCodec(final, a),
+		codec2: AsymmetricalFieldCodec(final, b),
 	) {
 
 	let encoder = fn(custom: final) -> Dynamic {
@@ -497,29 +506,19 @@ pub fn finish_custom(
 	)
 }
 
-// TODO can we merge this with RecordFieldCodec?
-/// Type used for specifiying a variant field
-pub type VariantFieldCodec(field) {
-	VariantFieldCodec(
-		field: String,
-		encoder: Encoder(field),
-		decoder: Decoder(field)
-	)
-}
-
 /// Used when building a custom type codec
 /// See documentation for `custom`
 pub fn variant_field(
 		field_name: String,
 		field_codec: Codec(field)
-	) -> VariantFieldCodec(field) {
+	) -> SymmetricalFieldCodec(field) {
 
 	let decoder: Decoder(field) = fn(record: Dynamic) {
 		dynamic.field(record, field_name)
 		|> result.then(field_codec.decoder)
 	}
 
-	VariantFieldCodec(
+	SymmetricalFieldCodec(
 		field_name,
 		field_codec.encoder,
 		decoder
@@ -567,7 +566,7 @@ pub fn variant1(
 		),
 		type_name: String,
 		constructor: fn(a) -> cons,
-		codec1: VariantFieldCodec(a)
+		codec1: SymmetricalFieldCodec(a)
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a) {
@@ -602,8 +601,8 @@ pub fn variant2(
 		),
 		type_name: String,
 		constructor: fn(a, b) -> cons,
-		codec1: VariantFieldCodec(a),
-		codec2: VariantFieldCodec(b)
+		codec1: SymmetricalFieldCodec(a),
+		codec2: SymmetricalFieldCodec(b)
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a, b) {
@@ -640,9 +639,9 @@ pub fn variant3(
 		),
 		type_name: String,
 		constructor: fn(a, b, c) -> cons,
-		codec1: VariantFieldCodec(a),
-		codec2: VariantFieldCodec(b),
-		codec3: VariantFieldCodec(c),
+		codec1: SymmetricalFieldCodec(a),
+		codec2: SymmetricalFieldCodec(b),
+		codec3: SymmetricalFieldCodec(c),
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a, b, c) {
@@ -677,7 +676,7 @@ pub fn variant3(
 fn dynamic_map_add_field(
 		fields: List(#(String, Dynamic)),
 		custom: final,
-		codec: RecordFieldCodec(final, a)
+		codec: AsymmetricalFieldCodec(final, a)
 	) {
 	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }
@@ -689,7 +688,7 @@ fn dynamic_map_add_type_name(fields, type_name: String) {
 fn variant_map_add_field(
 		fields: List(#(String, Dynamic)),
 		custom: final,
-		codec: VariantFieldCodec(final)
+		codec: SymmetricalFieldCodec(final)
 	) {
 	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }

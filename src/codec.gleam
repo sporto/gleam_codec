@@ -24,22 +24,87 @@ pub fn build(encoder, decoder) {
 	Codec(encoder: encoder, decoder: decoder)
 }
 
+/// Create a codec for Bool
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.bool()
+///
+/// let value = dynamic.from(True)
+///
+/// codec.decode(c, value)
+/// > Ok(True)
+/// ```
+///
 pub fn bool() -> Codec(Bool) {
 	build(dynamic.from, dynamic.bool)
 }
 
+/// Create a codec for Int
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.int()
+///
+/// let value = dynamic.from(12)
+///
+/// codec.decode(c, value)
+/// > Ok(12)
+/// ```
+///
 pub fn int() -> Codec(Int) {
 	build(dynamic.from, dynamic.int)
 }
 
+/// Create a codec for Float
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.float()
+///
+/// let value = dynamic.from(3.1516)
+///
+/// codec.decode(c, value)
+/// > Ok(3.1516)
+/// ```
+///
 pub fn float() -> Codec(Float) {
 	build(dynamic.from, dynamic.float)
 }
 
+/// Create a codec for String
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.string()
+///
+/// let value = dynamic.from("Hello")
+///
+/// codec.decode(c, value)
+/// > Ok("Hello")
+/// ```
+///
 pub fn string() -> Codec(String) {
 	build(dynamic.from, dynamic.string)
 }
 
+/// Create a codec for List
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.list(codec.int())
+///
+/// let value = dynamic.from([1, 2, 3])
+///
+/// codec.decode(c, value)
+/// > Ok([1, 2, 3])
+/// ```
+///
 pub fn list(codec: Codec(a)) -> Codec(List(a)) {
 	let encoder = fn(collection) {
 		collection
@@ -112,6 +177,22 @@ pub fn map(
 	)
 }
 
+/// Create a codec for Option
+///
+/// A Some is encoded as just the value e.g. Some("Hello") becomes "Hello"
+/// A None is encoded as a :null atom in Elixir
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.option(codec.string())
+///
+/// let value = codec.encode(c, Some("Hello"))
+///
+/// codec.decode(c, value)
+/// > Ok(Some("Hello"))
+/// ```
+///
 pub fn option(codec: Codec(a)) -> Codec(Option(a)) {
 
 	let encoder = fn(op) {
@@ -136,6 +217,18 @@ pub fn option(codec: Codec(a)) -> Codec(Option(a)) {
 	)
 }
 
+/// Create a codec for a tuple of two elements
+///
+/// ## Example
+///
+/// ```
+/// let c = codec.tuple2(codec.string(), codec.int())
+///
+/// let value = codec.encode(c, #("a", 1))
+///
+/// codec.decode(c, value)
+/// > Ok(#("a", 1))
+/// ```
 pub fn tuple2(
 		codec_a: Codec(a),
 		codec_b: Codec(b),
@@ -170,6 +263,19 @@ pub type RecordCodec(input, output) {
 	)
 }
 
+/// Build a RecordCodec
+/// To be used with record1, record2, ...
+///
+/// ## Example
+///
+/// ```
+/// codec.record_field(
+///   "age",
+///   fn(p: Pet) { p.age },
+///   codec.int()
+/// )
+/// ```
+///
 pub fn record_field(
 		name: String,
 		get: fn(record) -> field,

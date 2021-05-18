@@ -297,6 +297,41 @@ pub fn record_field(
 	RecordFieldCodec(name, encoder, decoder)
 }
 
+/// Create a codec for a record (a custom type with only one constructor) with one field
+///
+/// ## Example
+///
+/// ```
+/// type Person{
+///   Person(name: String)
+/// }
+///
+/// let c = codec.record1(
+///   "Person",
+///   Person,
+///   codec.record_field(
+///     "name",
+///     fn(p: Person) { p.name },
+///     codec.string()
+///   ),
+/// )
+///
+/// let sam = Person("Sam")
+///
+/// let value = codec.encode(c, sam)
+/// ```
+///
+/// The record will be encoded as a map
+///
+/// ```elixir
+/// %{ "__type__" => "Person", "name" => "Sam"}
+/// ```
+///
+/// ```
+/// codec.decode(c, value)
+/// > Ok(sam)
+/// ```
+///
 pub fn record1(
 		type_name: String,
 		constructor: fn(a) -> final,
@@ -318,6 +353,34 @@ pub fn record1(
 	build(encoder, decoder)
 }
 
+/// Create a codec for a record with two fields
+///
+/// ## Example
+///
+/// ```
+/// type Pet{
+///    Pet(age: Int, name: String)
+/// }
+///
+/// let c = codec.record2(
+///   "Pet",
+///   Pet,
+///   codec.record_field(
+///     "age",
+///     fn(p: Pet) { p.age },
+///     codec.int()
+///   ),
+///   codec.record_field(
+///     "name",
+///     fn(p: Pet) { p.name },
+///     codec.string()
+///   ),
+/// )
+///
+/// let pet = Pet(3, "Fido")
+///
+/// codec.encode(c, pet)
+///
 pub fn record2(
 		type_name: String,
 		constructor: fn(a, b) -> final,
@@ -342,6 +405,7 @@ pub fn record2(
 	build(encoder, decoder)
 }
 
+/// Partial Codec for creating a custom type codec
 pub type CustomCodec(match, v) {
 	CustomCodec(
 		match: match,
@@ -349,6 +413,53 @@ pub type CustomCodec(match, v) {
 	)
 }
 
+/// Create a codec for custom type
+///
+/// ##Example
+///
+///```
+/// type Process {
+///   Pending
+///   Active(Int, String)
+///   Done(answer: Float)
+/// }
+///
+/// let c = codec.custom(
+///   fn(
+///     encode_pending,
+///     encode_active,
+///     encode_done,
+///     value
+///   ) {
+///    case value {
+///      Pending ->
+///        encode_pending()
+///      Active(i, s) ->
+///        encode_active(i, s)
+///      Done(r) ->
+///        encode_done(r)
+///     }
+///   }
+///   |> function.curry4
+/// )
+/// |> codec.variant0("Pending", Pending)
+/// |> codec.variant2(
+///   "Active",
+///   Active,
+///   codec.variant_field("count", codec.int()),
+///   codec.variant_field("name", codec.string())
+///   )
+/// |> codec.variant1(
+///   "Done",
+///   Done,
+///   codec.variant_field("answer", codec.float())
+/// )
+/// |> codec.finish_custom()
+///
+/// let active = Active(1, "x")
+///
+/// let value = codec.encode(c, active)
+/// ```
 pub fn custom(match) {
 	CustomCodec(
 		match,
@@ -356,6 +467,7 @@ pub fn custom(match) {
 	)
 }
 
+/// Finish building a custom type codec
 pub fn finish_custom(
 		c: CustomCodec(Encoder(final), final)
 	) -> Codec(final) {
@@ -385,31 +497,37 @@ pub fn finish_custom(
 	)
 }
 
-pub type VariantCodec(field) {
-	VariantCodec(
+// TODO can we merge this with RecordFieldCodec?
+/// Type used for specifiying a variant field
+pub type VariantFieldCodec(field) {
+	VariantFieldCodec(
 		field: String,
 		encoder: Encoder(field),
 		decoder: Decoder(field)
 	)
 }
 
+/// Used when building a custom type codec
+/// See documentation for `custom`
 pub fn variant_field(
 		field_name: String,
 		field_codec: Codec(field)
-	) -> VariantCodec(field) {
+	) -> VariantFieldCodec(field) {
 
 	let decoder: Decoder(field) = fn(record: Dynamic) {
 		dynamic.field(record, field_name)
 		|> result.then(field_codec.decoder)
 	}
 
-	VariantCodec(
+	VariantFieldCodec(
 		field_name,
 		field_codec.encoder,
 		decoder
 	)
 }
 
+/// Create a codec for variant with no fields
+/// See documentation for `custom`
 pub fn variant0(
 		c: CustomCodec(
 			fn(fn() -> Dynamic) -> a,
@@ -441,6 +559,7 @@ pub fn variant0(
 	)
 }
 
+/// Create a codec for variant with one field
 pub fn variant1(
 		c: CustomCodec(
 			fn(fn(a) -> Dynamic) -> next,
@@ -448,7 +567,7 @@ pub fn variant1(
 		),
 		type_name: String,
 		constructor: fn(a) -> cons,
-		codec1: VariantCodec(a)
+		codec1: VariantFieldCodec(a)
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a) {
@@ -475,6 +594,7 @@ pub fn variant1(
 	)
 }
 
+/// Create a codec for variant with two fields
 pub fn variant2(
 		c: CustomCodec(
 			fn(fn(a, b) -> Dynamic) -> next,
@@ -482,8 +602,8 @@ pub fn variant2(
 		),
 		type_name: String,
 		constructor: fn(a, b) -> cons,
-		codec1: VariantCodec(a),
-		codec2: VariantCodec(b)
+		codec1: VariantFieldCodec(a),
+		codec2: VariantFieldCodec(b)
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a, b) {
@@ -512,6 +632,7 @@ pub fn variant2(
 	)
 }
 
+/// Create a codec for variant with three fields
 pub fn variant3(
 		c: CustomCodec(
 			fn(fn(a, b, c) -> Dynamic) -> next,
@@ -519,9 +640,9 @@ pub fn variant3(
 		),
 		type_name: String,
 		constructor: fn(a, b, c) -> cons,
-		codec1: VariantCodec(a),
-		codec2: VariantCodec(b),
-		codec3: VariantCodec(c),
+		codec1: VariantFieldCodec(a),
+		codec2: VariantFieldCodec(b),
+		codec3: VariantFieldCodec(c),
 	) -> CustomCodec(next, cons) {
 
 	let encoder = fn(a, b, c) {
@@ -568,7 +689,7 @@ fn dynamic_map_add_type_name(fields, type_name: String) {
 fn variant_map_add_field(
 		fields: List(#(String, Dynamic)),
 		custom: final,
-		codec: VariantCodec(final)
+		codec: VariantFieldCodec(final)
 	) {
 	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }
@@ -593,10 +714,12 @@ fn apply_decoded_result(
 		})
 }
 
+/// Encode a type
 pub fn encode(codec: Codec(a), a) -> Dynamic {
 	codec.encoder(a)
 }
 
+/// Decode a dynamic value
 pub fn decode(codec: Codec(a), a) -> Result(a, String) {
 	codec.decoder(a)
 }

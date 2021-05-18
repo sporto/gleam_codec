@@ -9,3 +9,6 @@ docs:
 
 docs-preview:
 	sfz -r ./gen/docs/
+
+docs-publish:
+	gleam docs publish --version 0.2.0 .

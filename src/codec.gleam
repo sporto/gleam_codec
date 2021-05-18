@@ -229,6 +229,7 @@ pub fn option(codec: Codec(a)) -> Codec(Option(a)) {
 /// codec.decode(c, value)
 /// > Ok(#("a", 1))
 /// ```
+///
 pub fn tuple2(
 		codec_a: Codec(a),
 		codec_b: Codec(b),
@@ -255,15 +256,16 @@ pub fn tuple2(
 	)
 }
 
-pub type RecordCodec(input, output) {
-	RecordCodec(
+/// A codec for a record field
+pub type RecordFieldCodec(input, output) {
+	RecordFieldCodec(
 		field: String,
 		encoder: Encoder(input),
 		decoder: Decoder(output)
 	)
 }
 
-/// Build a RecordCodec
+/// Build a RecordFieldCodec
 /// To be used with record1, record2, ...
 ///
 /// ## Example
@@ -280,7 +282,7 @@ pub fn record_field(
 		name: String,
 		get: fn(record) -> field,
 		field_codec: Codec(field),
-	) -> RecordCodec(record, field) {
+	) -> RecordFieldCodec(record, field) {
 
 	let encoder : Encoder(record) = fn(record) -> Dynamic {
 		let field_value = get(record)
@@ -292,13 +294,13 @@ pub fn record_field(
 		|> result.then(field_codec.decoder)
 	}
 
-	RecordCodec(name, encoder, decoder)
+	RecordFieldCodec(name, encoder, decoder)
 }
 
 pub fn record1(
 		type_name: String,
 		constructor: fn(a) -> final,
-		codec1: RecordCodec(final, a),
+		codec1: RecordFieldCodec(final, a),
 	) -> Codec(final) {
 
 	let encoder = fn(custom: final) -> Dynamic {
@@ -319,8 +321,8 @@ pub fn record1(
 pub fn record2(
 		type_name: String,
 		constructor: fn(a, b) -> final,
-		codec1: RecordCodec(final, a),
-		codec2: RecordCodec(final, b),
+		codec1: RecordFieldCodec(final, a),
+		codec2: RecordFieldCodec(final, b),
 	) {
 
 	let encoder = fn(custom: final) -> Dynamic {
@@ -554,7 +556,7 @@ pub fn variant3(
 fn dynamic_map_add_field(
 		fields: List(#(String, Dynamic)),
 		custom: final,
-		codec: RecordCodec(final, a)
+		codec: RecordFieldCodec(final, a)
 	) {
 	[ #(codec.field, codec.encoder(custom)), ..fields ]
 }

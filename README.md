@@ -2,7 +2,7 @@
 
 A library for encoding and decoding Gleam data structures to Erlang and Elixir via codecs.
 
-- A codec create both an encoder and decoder that are always in sync.
+- A codec creates both an encoder and decoder that are always in sync.
 - A codec has an opinionated serialization format. Custom types are serialized as maps.
 - A codec is not appropriate for decoding external data structures. As a codec expects a particular data structure.
 
@@ -40,8 +40,7 @@ Returns an Elixir map like
 
 ## Installation
 
-If [available in Hex](https://rebar3.org/docs/configuration/dependencies/#declaring-dependencies)
-this package can be installed by adding `gleam_codec` to your `rebar.config` dependencies:
+This package can be installed by adding `gleam_codec` to your `rebar.config` dependencies:
 
 ```erlang
 {deps, [
